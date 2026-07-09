@@ -15,7 +15,15 @@ export const AUTH_ESSENTIAL_FILES = [
   'Default/Login Data For Account-journal',
   'Default/Network Persistent State',
   'Default/Web Data',
+  // Session cookies (sin Expires/Max-Age) viven solo en memoria y Chromium no
+  // las escribe al archivo Cookies. Se exportan vía CDP a este JSON antes de
+  // cada guardado y se reimportan al arrancar, para que el login de Google
+  // (que usa session cookies) sobreviva entre contenedores. Ver cookie-state.ts.
+  'Default/cdp-cookies.json',
 ];
+
+// Ruta del JSON con el volcado completo de cookies (incluye session cookies).
+export const CDP_COOKIES_FILE = join(BROWSER_DATA_DIR, 'Default', 'cdp-cookies.json');
 
 export const AUTH_ESSENTIAL_DIRS = [
   'Default/Local Storage',

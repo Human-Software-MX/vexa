@@ -25,6 +25,7 @@ import { execSync } from 'child_process';
 import * as net from 'net';
 import { ensureBrowserDataDir, syncBrowserDataFromS3, syncBrowserDataToS3, cleanStaleLocks, BROWSER_DATA_DIR } from './s3-sync';
 import { verifyCookieServiceContract, downloadCookiesFromHttp, uploadCookiesToHttp } from './cookie-http';
+import { importCookieState } from './cookie-state';
 // HTTP imports removed - using unified callback service instead
 
 // Per-speaker transcription pipeline
@@ -2335,9 +2336,19 @@ export async function runBot(botConfig: BotConfig): Promise<void> {// Store botC
       ignoreDefaultArgs: ['--enable-automation'],
       args: authArgs,
       viewport: null,
+      // Otorgar mic/cámara al contexto persistente igual que los modos
+      // anónimo/Teams; sin esto los tracks pueden quedar silenciados.
+      permissions: ['microphone', 'camera'],
     });
 
     log('[Bot] Authenticated persistent context launched');
+
+    // Restaurar las session cookies del login (ver cookie-state.ts); sin esto el
+    // login de Google se pierde entre el contenedor de login y el de la junta.
+    if (botConfig.cookieStorageBackend !== 'http') {
+      const restored = await importCookieState(context);
+      log(`[Bot] Cookie state restaurado: ${restored} cookies`);
+    }
 
     // Apply init scripts to the persistent context
     const isVoiceAgent = !!botConfig.voiceAgentEnabled;

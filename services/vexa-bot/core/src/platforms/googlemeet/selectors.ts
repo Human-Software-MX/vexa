@@ -303,13 +303,19 @@ export const googleJoinButtonSelectors: string[] = [
 export const googleCameraButtonSelectors: string[] = [
   '[aria-label*="Turn off camera"]',
   'button[aria-label*="Turn off camera"]',
-  'button[aria-label*="Turn on camera"]'
+  'button[aria-label*="Turn on camera"]',
+  // Español
+  'button[aria-label*="Desactivar cámara"]',
+  'button[aria-label*="Activar cámara"]'
 ];
 
 export const googleMicrophoneButtonSelectors: string[] = [
   '[aria-label*="Turn off microphone"]',
   'button[aria-label*="Turn off microphone"]',
-  'button[aria-label*="Turn on microphone"]'
+  'button[aria-label*="Turn on microphone"]',
+  // Español
+  'button[aria-label*="Desactivar micrófono"]',
+  'button[aria-label*="Activar micrófono"]'
 ];
 
 // Name input — locale-agnostic FIRST. `aria-label="Your name"` is English-only,
