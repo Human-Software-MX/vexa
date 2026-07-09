@@ -171,8 +171,10 @@ export async function joinGoogleMeeting(
     // - "Join now" — standard authenticated join
     // - "Switch here" — same account already in the meeting
     // - "Ask to join" — cookies didn't load (fallback to anonymous)
-    const joinNowSelector = 'button:has-text("Join now")';
-    const switchHereSelector = 'button:has-text("Switch here")';
+    // Selectores bilingües: el texto del botón sigue el idioma de la cuenta de
+    // Google, que puede estar en español (ej. area@humansoftware.mx).
+    const joinNowSelector = 'button:has-text("Join now"), button:has-text("Unirse ahora")';
+    const switchHereSelector = 'button:has-text("Switch here"), button:has-text("Cambiar aquí")';
     const askToJoinSelector = googleJoinButtonSelectors[0];
 
     try {

@@ -107,6 +107,12 @@ export function getAuthenticatedBrowserArgs(): string[] {
     '--disable-gpu',
     '--use-fake-ui-for-media-stream',
     '--use-file-for-fake-video-capture=/dev/null',
+    // Sin esta política, Chromium bloquea el autoplay de los media elements
+    // remotos de Meet (sin gesto de usuario) y el audio entrante llega en
+    // SILENCIO al ScriptProcessor de captura → 0 segmentos transcritos.
+    // El modo anónimo/Teams ya la incluye vía baseBrowserArgs; el modo
+    // autenticado la omitía, de ahí que capturara puro silencio.
+    '--autoplay-policy=no-user-gesture-required',
     '--disable-features=VizDisplayCompositor',
     '--password-store=basic',
   ];

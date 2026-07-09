@@ -9,8 +9,14 @@ import { TTSPlaybackService } from './services/tts-playback';
 import { MeetingChatService } from './services/chat';
 import { s3Sync, syncBrowserDataFromS3, syncBrowserDataToS3, cleanStaleLocks, BROWSER_DATA_DIR, BROWSER_CACHE_EXCLUDES } from './s3-sync';
 import { verifyCookieServiceContract, downloadCookiesFromHttp, uploadCookiesToHttp } from './cookie-http';
+import { exportCookieState, importCookieState } from './cookie-state';
+import type { BrowserContext } from 'playwright-core';
 
 const WORKSPACE_DIR = '/workspace';
+
+// Contexto activo, para poder exportar las cookies (incl. session cookies) antes
+// de cada guardado sin cambiar la firma de saveAll/saveBrowserData.
+let activeContext: BrowserContext | null = null;
 
 // --- Git workspace helpers ---
 
@@ -100,6 +106,10 @@ function syncWorkspaceUp(config: BrowserSessionConfig): void {
 
 async function saveBrowserData(config: BrowserSessionConfig): Promise<{ success: boolean; error?: string }> {
   try {
+    // Volcar las session cookies a disco antes de sincronizar (ver cookie-state.ts).
+    if (activeContext) {
+      await exportCookieState(activeContext);
+    }
     if (config.cookieStorageBackend === 'http' && config.cookieServiceUrl) {
       await uploadCookiesToHttp({
         cookieServiceUrl: config.cookieServiceUrl,
@@ -164,6 +174,11 @@ export async function runBrowserSession(config: BrowserSessionConfig): Promise<v
     args: getBrowserSessionArgs(),
     viewport: null,
   });
+
+  // Restaurar session cookies del volcado previo (ver cookie-state.ts) y dejar el
+  // contexto accesible para exportarlas en cada guardado.
+  activeContext = context;
+  await importCookieState(context);
 
   // Get or create a page
   const pages = context.pages();

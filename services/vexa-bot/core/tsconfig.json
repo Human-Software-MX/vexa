@@ -13,5 +13,10 @@
   },
   "include": [
     "src/**/*"
+  ],
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/**/*.test.mts",
+    "src/**/*.spec.ts"
   ]
 }
