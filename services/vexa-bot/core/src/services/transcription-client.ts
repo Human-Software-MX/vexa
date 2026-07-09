@@ -1,5 +1,27 @@
 import { log } from '../utils';
 
+// APIs compatibles con OpenAI (whisper-1) devuelven el idioma como nombre completo
+// en inglés ("spanish", "english"...), pero el collector de meeting-api valida
+// contra códigos ISO-639-1 ("es", "en"...) y descarta el segmento si no coincide.
+// Normalizamos aquí para que los segmentos se acepten independientemente del backend.
+const LANGUAGE_NAME_TO_ISO: Record<string, string> = {
+  spanish: 'es', english: 'en', portuguese: 'pt', french: 'fr', german: 'de',
+  italian: 'it', dutch: 'nl', russian: 'ru', chinese: 'zh', japanese: 'ja',
+  korean: 'ko', arabic: 'ar', hindi: 'hi', turkish: 'tr', polish: 'pl',
+  ukrainian: 'uk', catalan: 'ca', galician: 'gl', basque: 'eu', romanian: 'ro',
+  greek: 'el', czech: 'cs', swedish: 'sv', danish: 'da', finnish: 'fi',
+  norwegian: 'no', hungarian: 'hu', hebrew: 'he', thai: 'th', vietnamese: 'vi',
+  indonesian: 'id', malay: 'ms', filipino: 'tl', tagalog: 'tl',
+};
+
+function normalizeLanguage(lang: string | undefined | null): string {
+  if (!lang) return 'en';
+  const l = String(lang).trim().toLowerCase();
+  // Ya es un código ISO-639-1 (2 letras)
+  if (/^[a-z]{2}$/.test(l)) return l;
+  return LANGUAGE_NAME_TO_ISO[l] || 'en';
+}
+
 export interface TranscriptionWord {
   word: string;
   start: number;
@@ -213,7 +235,7 @@ export class TranscriptionClient {
 
       return {
         text: data.text || '',
-        language: data.language || language || 'unknown',
+        language: normalizeLanguage(data.language || language),
         language_probability: data.language_probability ?? 0,
         duration: data.duration || 0,
         segments: (data.segments || []).map((s: any) => ({
