@@ -126,19 +126,22 @@ async function saveBrowserData(config: BrowserSessionConfig): Promise<{ success:
 }
 
 async function saveAll(config: BrowserSessionConfig): Promise<{ success: boolean; error?: string }> {
-  try {
-    console.log('[browser-session] Saving workspace...');
-    syncWorkspaceUp(config);
-  } catch (err: any) {
-    console.error(`[browser-session] Workspace save failed: ${err.message}`);
-    // Workspace failure is non-fatal, continue to browser data
-  }
+  // Cookies primero (TSK-50): docker stop da ~10s de gracia antes del SIGKILL y
+  // el sync del workspace (git/S3) puede tardar más que eso. Con el orden
+  // workspace→cookies, el kill llegaba a media salvada y las session cookies de
+  // Google se perdían — así fue como murió el login del bot.
   console.log('[browser-session] Saving browser data...');
   const result = await saveBrowserData(config);
   if (result.success) {
     console.log('[browser-session] Save complete');
   } else {
     console.error(`[browser-session] Browser data save FAILED: ${result.error}`);
+  }
+  try {
+    console.log('[browser-session] Saving workspace...');
+    syncWorkspaceUp(config);
+  } catch (err: any) {
+    console.error(`[browser-session] Workspace save failed: ${err.message}`);
   }
   return result;
 }
@@ -188,6 +191,35 @@ export async function runBrowserSession(config: BrowserSessionConfig): Promise<v
   console.log('[browser-session] Browser session ready. VNC :6080, CDP :9222');
   console.log(`[browser-session] Workspace: ${WORKSPACE_DIR}`);
   console.log(`[browser-session] Browser data: ${BROWSER_DATA_DIR}`);
+
+  // Keep-alive de la sesión de Google (TSK-50). Dos problemas que resuelve:
+  // (1) sin navegar a un dominio de Google las cookies nunca rotan, así que la
+  //     sesión expira (~2 semanas) aunque el export a S3/HTTP funcione;
+  // (2) las sesiones de refresco programadas viven ~1 min y el stop puede llegar
+  //     como SIGKILL, así que guardamos inmediatamente tras rotar en lugar de
+  //     esperar al primer auto-save de los 60s.
+  // Solo aplica en sesiones sin reunión adjunta para no navegar una página que
+  // esté siendo usada para atender un meeting.
+  if (!config.meeting_id) {
+    setTimeout(async () => {
+      try {
+        await page.goto('https://myaccount.google.com', { waitUntil: 'domcontentloaded', timeout: 30000 });
+        if (page.url().includes('accounts.google.com')) {
+          console.error('[browser-session] [keep-alive] SESION GOOGLE INVALIDA — se requiere re-login manual');
+        } else {
+          console.log('[browser-session] [keep-alive] Sesión de Google activa; cookies rotadas');
+        }
+      } catch (err: any) {
+        console.log(`[browser-session] [keep-alive] Navegación falló: ${err.message}`);
+      }
+      try {
+        await saveBrowserData(config);
+        console.log('[browser-session] [keep-alive] Cookies guardadas');
+      } catch (err: any) {
+        console.error(`[browser-session] [keep-alive] Save falló: ${err.message}`);
+      }
+    }, 5_000);
+  }
 
   // Set up Redis subscriber for commands
   const channelName = `browser_session:${config.container_name || 'default'}`;

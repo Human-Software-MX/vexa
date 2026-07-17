@@ -2194,7 +2194,9 @@ export async function runBot(botConfig: BotConfig): Promise<void> {// Store botC
   startCdpRelay();
 
   // --- UPDATED: Parse and store config values ---
-  currentLanguage = botConfig.language;
+  // Sin idioma explícito en la reunión, forzamos español (deployment es-only):
+  // el auto-detect de Whisper confunde es↔pt en audio corto/ruidoso.
+  currentLanguage = botConfig.language ?? process.env.VEXA_DEFAULT_LANGUAGE ?? 'es';
   allowedLanguages = botConfig.allowedLanguages?.length ? botConfig.allowedLanguages : null;
   currentTask = botConfig.transcribeEnabled === false ? null : (botConfig.task || 'transcribe');
   currentRedisUrl = botConfig.redisUrl;
